@@ -1,0 +1,107 @@
+---
+title: "Analysis of Restaurant Visits"
+author: "Shital Dilip Dere"
+Date: "Summer 1 2023"
+output: pdf_document
+---
+
+##Connecting database 
+```{r}
+   library(RMySQL)
+
+  db_user <- 'sql9623315'            # use your value from the setup
+  db_password <- '6PHeg5saHJ'    # use your value from the setup
+  db_name <-    'sql9623315'         # use your value from the setup
+  db_host <- 'sql9.freemysqlhosting.net'           # for db4free.net
+  db_port <- 3306
+  
+  
+  # 3. Connect to remote server database
+  mydb <-  dbConnect(MySQL(), user = db_user, password = db_password,
+                     dbname = db_name, host = db_host, port = db_port)
+
+
+```
+
+
+## Executive Summary
+```{r}
+
+
+
+
+
+```
+
+## Data
+```{r}
+
+query <- "select r.name as restaurant_name, count(*) as numOfVisits, sum(`num.guests`) as totalGuests, YEAR(v.vdate) as year
+from visits v
+inner join restaurants r on r.rid = v.rid
+inner join restaurant_facts f on r.rid = f.rid
+group by r.rid, YEAR(v.vdate)
+order by  year;"
+
+# Execute the SQL query and store the result in a data frame
+
+result <- dbGetQuery(mydb, query)
+print("Displaying a table containing the number of visits and number of guests per restaurant")
+print(result)
+
+```
+
+## Discussion
+
+```{r}
+query <- "SELECT r.name AS restaurant_name
+FROM visits v
+INNER JOIN restaurants r ON r.rid = v.rid
+GROUP BY r.rid
+HAVING COUNT(*) = (
+  SELECT MAX(numOfVisits)
+  FROM (
+    SELECT COUNT(*) AS numOfVisits
+    FROM visits
+    GROUP BY rid
+  ) AS subquery
+);"
+
+result <- dbGetQuery(mydb, query)
+print(result)
+```
+
+ had the most overall visits,while
+
+```{sql connection=mydb}
+SELECT r.name
+FROM restaurant_facts f
+INNER JOIN restaurants r ON r.rid = f.rid
+GROUP BY r.name
+HAVING SUM(f.numGuests) = (
+  SELECT MAX(totalGuests)
+  FROM (
+    SELECT SUM(numGuests) AS totalGuests
+    FROM restaurant_facts
+    GROUP BY rid
+  ) AS subquery
+)
+```
+ had the most guests.
+```{sql connection=mydb}
+SELECT YEAR(v.vdate) AS year
+FROM visits v
+GROUP BY YEAR(v.vdate)
+HAVING COUNT(*) = (
+  SELECT MAX(numOfVisits)
+  FROM (
+    SELECT COUNT(*) AS numOfVisits
+    FROM visits
+    GROUP BY YEAR(vdate)
+  ) AS subquery
+)
+```
+ was the year where we saw the most visits to our restaurants.
+
+
+
